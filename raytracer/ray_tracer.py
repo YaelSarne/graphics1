@@ -9,9 +9,10 @@ from scene_settings import SceneSettings
 from surfaces.cube import Cube
 from surfaces.infinite_plane import InfinitePlane
 from surfaces.sphere import Sphere
+from ray import Ray
 
 
-def parse_scene_file(file_path):
+def parse_scene_file(file_path, width_pixels, height_pixels):
     objects = []
     camera = None
     scene_settings = None
@@ -24,7 +25,7 @@ def parse_scene_file(file_path):
             obj_type = parts[0]
             params = [float(p) for p in parts[1:]]
             if obj_type == "cam":
-                camera = Camera(params[:3], params[3:6], params[6:9], params[9], params[10])
+                camera = Camera(params[:3], params[3:6], params[6:9], params[9], params[10], width_pixels, height_pixels)
             elif obj_type == "set":
                 scene_settings = SceneSettings(params[:3], params[3], params[4])
             elif obj_type == "mtl":
@@ -54,6 +55,7 @@ def save_image(image_array):
     image.save("scenes/Spheres.png")
 
 
+
 def main():
     parser = argparse.ArgumentParser(description='Python Ray Tracer')
     parser.add_argument('scene_file', type=str, help='Path to the scene file')
@@ -63,7 +65,20 @@ def main():
     args = parser.parse_args()
 
     # Parse the scene file
-    camera, scene_settings, objects = parse_scene_file(args.scene_file)
+    camera, scene_settings, objects = parse_scene_file(args.scene_file, args.width, args.height)
+
+    #create pixel grid
+    row_head = camera.top_right_pixel
+    for i in range(args.height):
+        curr_pixel = row_head
+        for i in range(args.width):
+            curr_ray = Ray(camera.position, curr_pixel)
+
+            #do what you do with curr - create ray, check intersections, ets
+            curr_pixel = curr_pixel - camera.pixel_size * camera.width_v
+        row_head = row_head - camera.pixel_size * camera.height_v
+
+
 
     # TODO: Implement the ray tracer
 
