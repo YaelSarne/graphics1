@@ -9,6 +9,7 @@ from scene_settings import SceneSettings
 from surfaces.cube import Cube
 from surfaces.infinite_plane import InfinitePlane
 from surfaces.sphere import Sphere
+from ray import Ray
 
 
 def parse_scene_file(file_path, width_pixels, height_pixels):
@@ -66,6 +67,16 @@ def main():
     # Parse the scene file
     camera, scene_settings, objects = parse_scene_file(args.scene_file, args.width, args.height)
 
+    #create pixel grid
+    row_head = camera.top_right_pixel
+    for i in range(args.height):
+        curr_pixel = row_head
+        for i in range(args.width):
+            curr_ray = Ray(camera.position, curr_pixel)
+
+            #do what you do with curr - create ray, check intersections, ets
+            curr_pixel = curr_pixel - camera.pixel_size * camera.width_v
+        row_head = row_head - camera.pixel_size * camera.height_v
 
 
 
