@@ -16,11 +16,11 @@ class Sphere:
  
         t_ca = np.dot(L, ray.V)
         if (t_ca < 0):
-            return 0
+            return None, None
         
         d2 = np.dot(L, L)- t_ca**2 
         if (d2 > self.radius**2):
-            return 0
+            return None, None
         
         t_hc = math.sqrt(self.radius**2-d2)
         t1 = t_ca - t_hc
@@ -32,6 +32,8 @@ class Sphere:
             t = t1           
         elif t2 >= 0:
             t = t2
+        else:
+            return None, None
         
         hit_point = ray.camera_point + t * ray.V
         return hit_point, t

@@ -1,5 +1,8 @@
 import numpy as np
 import math
+from surfaces.cube import Cube
+from surfaces.infinite_plane import InfinitePlane
+from surfaces.sphere import Sphere
 
 class Ray:
     def __init__(self, camera_point, pixel_point):
@@ -13,11 +16,14 @@ class Ray:
         t_min = math.inf
         closest_hit_point = np.array([math.inf,math.inf,math.inf], dtype=float)
         closest_obj = None
+        surface_types = (Sphere, Cube, InfinitePlane)
+
         for obj in objects:
-            result = obj.find_intersection(self)
-            if result is None:
+            if not isinstance(obj, surface_types):
                 continue
-            hit_point, t = result
+            hit_point, t = obj.find_intersection(self)
+            if hit_point is None or t is None:
+                continue
             if t < t_min:
                 t_min = t
                 closest_hit_point = hit_point

@@ -19,7 +19,7 @@ class Cube:
         for i in range(3):
             if ray.V[i] == 0: # ray parrallel 
                 if ray.camera_point[i] < min_bounds[i] or ray.camera_point[i] > max_bounds[i]:
-                    return None
+                    return None, None
                 # always in bound
                 t1 = -math.inf 
                 t2 = math.inf
@@ -33,9 +33,9 @@ class Cube:
                 t_far = min(t_far, t2)
         
         if t_near > t_far:
-            return None
+            return None, None
         if t_far < 0: #t_min = 0, cube is behind camera
-            return None
+            return None, None
         if t_near < 0:
             t = t_far
         else:

@@ -48,11 +48,11 @@ def parse_scene_file(file_path, width_pixels, height_pixels):
     return camera, scene_settings, objects
 
 
-def save_image(image_array):
+def save_image(image_array, output_filename): # <-- הוספת ארגומנט
     image = Image.fromarray(np.uint8(image_array))
 
-    # Save the image to a file
-    image.save("scenes/Spheres.png")
+    # שימוש בשם הקובץ שסופק
+    image.save(output_filename) # <-- שימוש בארגומנט
 
 
 
@@ -63,27 +63,39 @@ def main():
     parser.add_argument('--width', type=int, default=500, help='Image width')
     parser.add_argument('--height', type=int, default=500, help='Image height')
     args = parser.parse_args()
-
     # Parse the scene file
+    
+    
     camera, scene_settings, objects = parse_scene_file(args.scene_file, args.width, args.height)
 
+    image_array = np.zeros((args.height, args.width, 3), dtype=np.uint8)
     #create pixel grid
     row_head = camera.top_right_pixel
-    for i in range(args.height):
+    for y in range(args.height):
         curr_pixel = row_head
-        for i in range(args.width):
+        for x in range(args.width):
             curr_ray = Ray(camera.position, curr_pixel)
+            t_min, closest_hit_point, closest_obj = curr_ray.find_ray_closest_intersection(objects)
+            if closest_obj is None:
+                color = np.array([0, 0, 0], dtype=np.uint8)            # no hit → black
+            elif isinstance(closest_obj, Sphere):
+                color = np.array([255, 0, 0], dtype=np.uint8)          # sphere → red
+            elif isinstance(closest_obj, Cube):
+                color = np.array([0, 255, 0], dtype=np.uint8)          # cube → green
+            elif isinstance(closest_obj, InfinitePlane):
+                color = np.array([0, 0, 255], dtype=np.uint8)          # plane → blue
+            else:
+                color = np.array([255, 255, 255], dtype=np.uint8)      # anything else
 
-            #do what you do with curr - create ray, check intersections, ets
+            image_array[y, x] = color
             curr_pixel = curr_pixel - camera.pixel_size * camera.width_v
         row_head = row_head - camera.pixel_size * camera.height_v
-
 
 
     # TODO: Implement the ray tracer
 
     # Dummy result
-    image_array = np.zeros((500, 500, 3))
+    #image_array = np.zeros((500, 500, 3))
 
     # Save the output image
     save_image(image_array)
