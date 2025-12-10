@@ -3,15 +3,14 @@ import math
 
 class Sphere:
     def __init__(self, position, radius, material_index):
-        self.position = position
+        self.position =  np.array(position, dtype=float)
         self.radius = radius
         self.material_index = material_index
-        self.position_point = np.array(self.position, dtype=float)
 
     def find_intersection(self, ray):
         """Find sphere intersection with ray using geometric method"""
                     
-        L = self.position_point - ray.camera_point
+        L = self.position - ray.camera_point
  
         t_ca = np.dot(L, ray.V)
         if (t_ca < 0):
@@ -41,7 +40,7 @@ class Sphere:
     def get_normal_from_hit_point(self, hit_point):
         if hit_point is None:
             return None
-        normal = hit_point - self.position_point
+        normal = hit_point - self.position
         normal = normal / np.linalg.norm(normal)
         return normal
 
