@@ -98,7 +98,7 @@ def main():
     #image_array = np.zeros((500, 500, 3))
 
     # Save the output image
-    save_image(image_array)
+    save_image(image_array, args.output_image)
 
 
 if __name__ == '__main__':
