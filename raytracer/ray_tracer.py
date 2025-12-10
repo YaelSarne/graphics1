@@ -54,6 +54,28 @@ def save_image(image_array, output_filename): # <-- הוספת ארגומנט
     # שימוש בשם הקובץ שסופק
     image.save(output_filename) # <-- שימוש בארגומנט
 
+def colour_by_lights(closest_hit_point, closest_obj, lights, objects):
+    for light in lights:
+        ray = Ray(closest_hit_point, light.position)
+        is_visible = ray.is_visible(objects)
+        if 
+        
+    return
+
+def create_light_list(objects):
+    #probably this is the function to change for soft shadows
+    lights = []
+    for obj in objects:
+        if isinstance(obj, Light):
+            lights.append(obj)
+    return
+
+def compute_colour(t_min, closest_hit_point, closest_obj, objects):
+    lights = create_light_list(objects)
+    #go by the calculation in the document
+    induced_by_lights = colour_by_lights(closest_hit_point, closest_obj, lights, objects)
+    return
+    
 
 
 def main():
@@ -77,15 +99,10 @@ def main():
             curr_ray = Ray(camera.position, curr_pixel)
             t_min, closest_hit_point, closest_obj = curr_ray.find_ray_closest_intersection(objects)
             if closest_obj is None:
+                #change to be the background color
                 color = np.array([0, 0, 0], dtype=np.uint8)            # no hit → black
-            elif isinstance(closest_obj, Sphere):
-                color = np.array([255, 0, 0], dtype=np.uint8)          # sphere → red
-            elif isinstance(closest_obj, Cube):
-                color = np.array([0, 255, 0], dtype=np.uint8)          # cube → green
-            elif isinstance(closest_obj, InfinitePlane):
-                color = np.array([0, 0, 255], dtype=np.uint8)          # plane → blue
             else:
-                color = np.array([255, 255, 255], dtype=np.uint8)      # anything else
+                color = compute_colour(t_min, closest_hit_point, closest_obj, objects)
 
             image_array[y, x] = color
             curr_pixel = curr_pixel - camera.pixel_size * camera.width_v
