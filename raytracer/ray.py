@@ -31,4 +31,7 @@ class Ray:
         if closest_obj is None:
             return None, None, None
         return t_min, closest_hit_point, closest_obj
-        
+    
+    def find_ray_closest_object(self, objects):
+        t_min, closest_hit_point, closest_obj = self.find_ray_closest_intersection(objects)
+        return closest_obj

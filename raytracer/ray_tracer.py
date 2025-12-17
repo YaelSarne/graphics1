@@ -14,6 +14,7 @@ from ray import Ray
 
 def parse_scene_file(file_path, width_pixels, height_pixels):
     objects = []
+    materials = []
     camera = None
     scene_settings = None
     with open(file_path, 'r') as f:
@@ -31,9 +32,11 @@ def parse_scene_file(file_path, width_pixels, height_pixels):
             elif obj_type == "mtl":
                 material = Material(params[:3], params[3:6], params[6:9], params[9], params[10])
                 objects.append(material)
+                materials.append(material)
             elif obj_type == "sph":
                 sphere = Sphere(params[:3], params[3], int(params[4]))
                 objects.append(sphere)
+                #print(sphere.material_index)
             elif obj_type == "pln":
                 plane = InfinitePlane(params[:3], params[3], int(params[4]))
                 objects.append(plane)
@@ -45,7 +48,7 @@ def parse_scene_file(file_path, width_pixels, height_pixels):
                 objects.append(light)
             else:
                 raise ValueError("Unknown object type: {}".format(obj_type))
-    return camera, scene_settings, objects
+    return camera, scene_settings, objects, materials
 
 
 def save_image(image_array, output_filename): # <-- הוספת ארגומנט
@@ -53,6 +56,36 @@ def save_image(image_array, output_filename): # <-- הוספת ארגומנט
 
     # שימוש בשם הקובץ שסופק
     image.save(output_filename) # <-- שימוש בארגומנט
+
+
+def reflective_color(scene_settings, obj,ray, materials, objects, max_iters):
+    if max_iters <= 0 or obj is None:
+        return scene_settings.background_color
+    
+    material = materials[obj.material_index -1]
+    normal, hit_point = obj.get_normal_from_ray(ray)
+    normal = normal / np.linalg.norm(normal)
+    if np.dot(normal, ray.V) > 0:
+        normal = -normal
+    
+    local_color = color_by_lights(scene_settings, obj, ray, materials, objects)
+    if np.all(material.reflection_color==0):
+        return local_color
+
+    reflection_dir = ray.V - 2 * np.dot(ray.V, normal) * normal
+    reflection_dir = reflection_dir / np.linalg.norm(reflection_dir)
+
+    eps = 1e-4
+    reflected_ray = Ray(hit_point + eps * normal, hit_point + eps * normal + reflection_dir)
+
+    closest_obj = reflected_ray.find_ray_closest_object(objects)
+    if closest_obj is None:
+        reflected_color = scene_settings.background_color
+    else:
+        reflected_color = reflective_color(scene_settings, closest_obj, reflected_ray, materials, objects, max_iters -1 )
+
+    return (1 - material.reflection_color) * local_color + reflected_color * material.reflection_color
+
 
 
 
@@ -66,7 +99,7 @@ def main():
     # Parse the scene file
     
     
-    camera, scene_settings, objects = parse_scene_file(args.scene_file, args.width, args.height)
+    camera, scene_settings, objects, materials = parse_scene_file(args.scene_file, args.width, args.height)
 
     image_array = np.zeros((args.height, args.width, 3), dtype=np.uint8)
     #create pixel grid
