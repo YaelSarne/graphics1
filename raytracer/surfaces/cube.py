@@ -1,23 +1,25 @@
 import math
+import numpy as np
 
 class Cube:
     def __init__(self, position, scale, material_index):
-        self.position = position
+        self.position = np.array(position, dtype=float)
         self.scale = scale
         self.material_index = material_index
 
     def find_intersection(self, ray):
         """Find cube intersection with ray"""
-        half = self.scale/2
-        min_bounds = [self.position[0] - half , self.position[1] - half, self.position[2] - half]
-        max_bounds = [self.position[0] + half, self.position[1] + half, self.position[2] + half]
-        
+        half = self.scale/2.0
+
+        min_bounds = self.position - half
+        max_bounds = self.position + half
+
         t_near = -math.inf
         t_far = math.inf
 
         # intersections with P = P0 + tV, for each coordinate (x=0,y=1,z=2)
         for i in range(3):
-            if ray.V[i] == 0: # ray parrallel 
+            if abs(ray.V[i]) < 1e-6: # ray parrallel 
                 if ray.camera_point[i] < min_bounds[i] or ray.camera_point[i] > max_bounds[i]:
                     return None, None
                 # always in bound
@@ -42,3 +44,34 @@ class Cube:
             t = t_near
         hit_point = ray.camera_point + t*ray.V
         return hit_point, t
+    
+    def get_hit_point(self, ray):
+        hit_point, t = self.find_intersection(ray)
+        return hit_point
+
+    def get_normal_from_hit_point(self, hit_point):
+        if hit_point is None:
+            return None
+
+        d = hit_point - self.position
+
+        # find the farests asix 
+        max_val = abs(d[0])
+        axis = 0
+
+        for i in range(1, 3):
+            if abs(d[i]) > max_val:
+                max_val = abs(d[i])
+                axis = i
+
+        normal = np.zeros(3)
+        normal[axis] = 1.0 if d[axis] > 0 else -1.0
+
+        return normal
+    
+    def get_normal_from_ray(self, ray):
+        hit_point = self.get_hit_point(ray)
+        if hit_point is None:
+            return None, None
+        normal = self.get_normal_from_hit_point(hit_point)
+        return normal, hit_point
