@@ -89,6 +89,39 @@ def reflective_color(scene_settings, obj,ray, materials, objects, max_iters):
 
 
 
+
+def color_by_lights(closest_hit_point, closest_obj, lights, objects, material, camera):
+    colors = [0, 0, 0]
+    for light in lights:
+        light_ray = Ray(closest_hit_point, light.position)
+        is_visible = light_ray.is_visible(objects)
+        if is_visible or (1-light.shadow_intensity) > 0:
+            normal = closest_obj.get_normal_from_hit_point(closest_hit_point)
+            diff_angle = np.dot(normal, light_ray.V)
+            diffuse_light = [light.colour[i]*material.diffuse_colur[i]*diff_angle for i in range(3)]
+            observer_ray = Ray(closest_hit_point, camera.position)
+            spec_angle = np.dot(observer_ray, light_ray)
+            specular_light = [light.specular_intensity*light.colour[i]*material.specular_colur[i]*spec_angle**material.shininess for i in range(3)]
+            colors = [colors[i] + diffuse_light[i] + specular_light[i] for i in range(3)]
+    return colors
+
+def create_light_list(objects):
+    #probably this is the function to change for soft shadows
+    lights = []
+    for obj in objects:
+        if isinstance(obj, Light):
+            lights.append(obj)
+    return lights
+
+def compute_color(t_min, closest_hit_point, closest_obj, objects, materials, camera):
+    material = materials[closest_obj.material_index - 1]
+    lights = create_light_list(objects)
+    #go by the calculation in the document
+    induced_by_lights = color_by_lights(closest_hit_point, closest_obj, lights, objects, material, camera)
+    return induced_by_lights*(1-material.transperancy) #change to have everything
+    
+
+
 def main():
     parser = argparse.ArgumentParser(description='Python Ray Tracer')
     parser.add_argument('scene_file', type=str, help='Path to the scene file')
@@ -110,15 +143,10 @@ def main():
             curr_ray = Ray(camera.position, curr_pixel)
             t_min, closest_hit_point, closest_obj = curr_ray.find_ray_closest_intersection(objects)
             if closest_obj is None:
+                #change to be the background color
                 color = np.array([0, 0, 0], dtype=np.uint8)            # no hit → black
-            elif isinstance(closest_obj, Sphere):
-                color = np.array([255, 0, 0], dtype=np.uint8)          # sphere → red
-            elif isinstance(closest_obj, Cube):
-                color = np.array([0, 255, 0], dtype=np.uint8)          # cube → green
-            elif isinstance(closest_obj, InfinitePlane):
-                color = np.array([0, 0, 255], dtype=np.uint8)          # plane → blue
             else:
-                color = np.array([255, 255, 255], dtype=np.uint8)      # anything else
+                color = np.array(compute_color(t_min, closest_hit_point, closest_obj, objects, materials, camera), dtype=np.uint8)
 
             image_array[y, x] = color
             curr_pixel = curr_pixel - camera.pixel_size * camera.width_v
