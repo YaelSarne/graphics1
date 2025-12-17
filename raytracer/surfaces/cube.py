@@ -69,9 +69,9 @@ class Cube:
 
         return normal
     
-    # def get_normal_from_ray(self, ray):
-   #     hit_point = self.get_hit_point(ray)
-   #     if hit_point is None:
-   #         return None, None
-   #     normal = self.get_normal_from_hit_point(hit_point)
-   #     return normal, hit_point
+    def get_normal_from_ray(self, ray):
+        hit_point = self.get_hit_point(ray)
+        if hit_point is None:
+            return None, None
+        normal = self.get_normal_from_hit_point(hit_point)
+        return normal, hit_point

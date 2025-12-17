@@ -28,11 +28,11 @@ class InfinitePlane:
         N = self.normal / np.linalg.norm(self.normal)
         return N
 
-    #def get_normal_from_ray(self, ray):
-    #    hit_point = self.get_hit_point(ray)
-    #    if hit_point is None:
-    #        return None, None
-    #    N = self.get_normal_from_hit_point(hit_point)
-    #    return N, hit_point
+    def get_normal_from_ray(self, ray):
+        hit_point = self.get_hit_point(ray)
+        if hit_point is None:
+            return None, None
+        N = self.get_normal_from_hit_point(hit_point)
+        return N, hit_point
 
         
