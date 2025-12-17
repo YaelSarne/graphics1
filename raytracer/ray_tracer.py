@@ -58,7 +58,7 @@ def save_image(image_array, output_filename): # <-- הוספת ארגומנט
     image.save(output_filename) # <-- שימוש בארגומנט
 
 
-def reflective_color(scene_settings, obj,ray, materials, objects, max_iters):
+def reflective_color(scene_settings, lights, obj,ray, materials, objects, camera, max_iters):
     if max_iters <= 0 or obj is None:
         return scene_settings.background_color
     
@@ -68,7 +68,7 @@ def reflective_color(scene_settings, obj,ray, materials, objects, max_iters):
     if np.dot(normal, ray.V) > 0:
         normal = -normal
     
-    local_color = color_by_lights(scene_settings, obj, ray, materials, objects)
+    local_color = np.array(color_by_lights(hit_point, obj, lights, objects, material, camera))
     if np.all(material.reflection_color==0):
         return local_color
 
@@ -80,14 +80,10 @@ def reflective_color(scene_settings, obj,ray, materials, objects, max_iters):
 
     closest_obj = reflected_ray.find_ray_closest_object(objects)
     if closest_obj is None:
-        reflected_color = scene_settings.background_color
+        reflected_color = np.array(scene_settings.background_color)
     else:
-        reflected_color = reflective_color(scene_settings, closest_obj, reflected_ray, materials, objects, max_iters -1 )
-
-    return (1 - material.reflection_color) * local_color + reflected_color * material.reflection_color
-
-
-
+        reflected_color = np.array(reflective_color(scene_settings, lights, closest_obj, reflected_ray, materials, objects, camera, max_iters -1 ))
+    return (np.array([1,1,1]) - material.reflection_color) * local_color + reflected_color * material.reflection_color
 
 
 def color_by_lights(closest_hit_point, closest_obj, lights, objects, material, camera):
@@ -98,10 +94,10 @@ def color_by_lights(closest_hit_point, closest_obj, lights, objects, material, c
         if is_visible or (1-light.shadow_intensity) > 0:
             normal = closest_obj.get_normal_from_hit_point(closest_hit_point)
             diff_angle = np.dot(normal, light_ray.V)
-            diffuse_light = [light.colour[i]*material.diffuse_colur[i]*diff_angle for i in range(3)]
+            diffuse_light = [light.color[i]*material.diffuse_color[i]*diff_angle for i in range(3)]
             observer_ray = Ray(closest_hit_point, camera.position)
-            spec_angle = np.dot(observer_ray, light_ray)
-            specular_light = [light.specular_intensity*light.colour[i]*material.specular_colur[i]*spec_angle**material.shininess for i in range(3)]
+            spec_angle = np.dot(observer_ray.V, light_ray.V)
+            specular_light = [light.specular_intensity*light.color[i]*material.specular_color[i]*spec_angle**material.shininess for i in range(3)]
             colors = [colors[i] + diffuse_light[i] + specular_light[i] for i in range(3)]
     return colors
 
@@ -113,14 +109,14 @@ def create_light_list(objects):
             lights.append(obj)
     return lights
 
-def compute_color(t_min, closest_hit_point, closest_obj, objects, materials, camera):
+def compute_color(ray, closest_hit_point, closest_obj, objects, materials, camera, scene_settings):
     material = materials[closest_obj.material_index - 1]
     lights = create_light_list(objects)
     #go by the calculation in the document
-    induced_by_lights = color_by_lights(closest_hit_point, closest_obj, lights, objects, material, camera)
-    return induced_by_lights*(1-material.transperancy) #change to have everything
+    induced_by_lights = np.array(color_by_lights(closest_hit_point, closest_obj, lights, objects, material, camera))
+    reflected_color = reflective_color(scene_settings,lights, closest_obj,ray, materials, objects, camera, 4)
+    return induced_by_lights*(1-material.transparency)+reflected_color #change to have everything
     
-
 
 def main():
     parser = argparse.ArgumentParser(description='Python Ray Tracer')
@@ -144,9 +140,9 @@ def main():
             t_min, closest_hit_point, closest_obj = curr_ray.find_ray_closest_intersection(objects)
             if closest_obj is None:
                 #change to be the background color
-                color = np.array([0, 0, 0], dtype=np.uint8)            # no hit → black
+                color = np.array(scene_settings.background_color)            # no hit → black
             else:
-                color = np.array(compute_color(t_min, closest_hit_point, closest_obj, objects, materials, camera), dtype=np.uint8)
+                color = np.array(compute_color(curr_ray, closest_hit_point, closest_obj, objects, materials, camera, scene_settings), dtype=np.uint8)
 
             image_array[y, x] = color
             curr_pixel = curr_pixel - camera.pixel_size * camera.width_v
