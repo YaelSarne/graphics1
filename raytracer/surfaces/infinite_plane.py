@@ -3,6 +3,8 @@ import numpy as np
 class InfinitePlane:
     def __init__(self, normal, offset, material_index):
         self.normal = np.array(normal, dtype=float)
+        self.normal = self.normal / np.linalg.norm(self.normal)
+
         self.offset = offset
         self.material_index = material_index
 
@@ -23,16 +25,15 @@ class InfinitePlane:
         return hit_point
 
     def get_normal_from_hit_point(self, hit_point):
-        if hit_point is None:
-            return None
-        N = self.normal / np.linalg.norm(self.normal)
-        return N
+        return self.normal
 
     def get_normal_from_ray(self, ray):
         hit_point = self.get_hit_point(ray)
         if hit_point is None:
             return None, None
-        N = self.get_normal_from_hit_point(hit_point)
-        return N, hit_point
+        normal = self.normal
+        if np.dot(ray.V, normal) > 0:
+            normal = -normal
+        return normal, hit_point
 
         

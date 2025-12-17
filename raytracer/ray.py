@@ -41,8 +41,8 @@ class Ray:
             if hit_point is None or t is None:
                 continue
             else:
-                return True
-        return False
+                return False
+        return True
 
         
     def find_ray_closest_object(self, objects):
