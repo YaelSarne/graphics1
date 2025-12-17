@@ -56,11 +56,14 @@ def save_image(image_array, output_filename): # <-- הוספת ארגומנט
     # שימוש בשם הקובץ שסופק
     image.save(output_filename) # <-- שימוש בארגומנט
 
-def color_by_lights(closest_hit_point, closest_obj, lights, objects, material, light_ray, camera):
+
+
+
+def color_by_lights(closest_hit_point, closest_obj, lights, objects, material, camera):
     colors = [0, 0, 0]
     for light in lights:
-        ray = Ray(closest_hit_point, light.position)
-        is_visible = ray.is_visible(objects)
+        light_ray = Ray(closest_hit_point, light.position)
+        is_visible = light_ray.is_visible(objects)
         if is_visible or (1-light.shadow_intensity) > 0:
             normal = closest_obj.get_normal_from_hit_point(closest_hit_point)
             diff_angle = np.dot(normal, light_ray.V)
@@ -80,7 +83,7 @@ def create_light_list(objects):
     return lights
 
 def compute_color(t_min, closest_hit_point, closest_obj, objects, materials, camera):
-    material = materials[closest_obj.material_index]
+    material = materials[closest_obj.material_index - 1]
     lights = create_light_list(objects)
     #go by the calculation in the document
     induced_by_lights = color_by_lights(closest_hit_point, closest_obj, lights, objects, material, camera)
