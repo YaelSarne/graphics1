@@ -87,16 +87,17 @@ def reflective_color(scene_settings, lights, obj,ray, materials, objects, camera
 
 
 def color_by_lights(closest_hit_point, closest_obj, lights, objects, material, camera):
+    eps = 1e-4
     colors = np.array([0.0, 0.0, 0.0])
     for light in lights:
-        light_ray = Ray(closest_hit_point, light.position)
+        normal = closest_obj.get_normal_from_hit_point(closest_hit_point)
+        observer_ray = Ray(closest_hit_point, camera.position)
+        if np.dot(normal, observer_ray.V) < 0:
+            normal = -normal
+        light_ray = Ray(closest_hit_point + eps * normal, light.position)
         is_visible = light_ray.is_visible(objects)
         light_influence = 1 if is_visible else (1-light.shadow_intensity)
         if light_influence > 0 :
-            normal = closest_obj.get_normal_from_hit_point(closest_hit_point)
-            observer_ray = Ray(closest_hit_point, camera.position)
-            if np.dot(normal, observer_ray.V) < 0:
-                normal = -normal
             diff_angle = max(0.0, np.dot(normal, light_ray.V))
             diffuse_light = [light.color[i]*material.diffuse_color[i]*diff_angle for i in range(3)]
             reflected_ray = light_ray.V - 2*np.dot(light_ray.V, normal)*normal
@@ -114,7 +115,6 @@ def create_light_list(objects):
     return lights
 
 def compute_color(ray, closest_hit_point, closest_obj, objects, materials, camera, scene_settings):
-    material = materials[closest_obj.material_index - 1]
     lights = create_light_list(objects)
     #go by the calculation in the document
     reflected_color = reflective_color(scene_settings,lights, closest_obj,ray, materials, objects, camera, 4)
@@ -135,29 +135,21 @@ def main():
 
     image_array = np.zeros((args.height, args.width, 3), dtype=float)
     #create pixel grid
-    row_head = camera.top_right_pixel
+    row_head = camera.top_left_pixel
     for y in range(args.height):
         curr_pixel = row_head
         for x in range(args.width):
             curr_ray = Ray(camera.position, curr_pixel)
             t_min, closest_hit_point, closest_obj = curr_ray.find_ray_closest_intersection(objects)
             if closest_obj is None:
-                #change to be the background color
-                color = np.array(scene_settings.background_color)            # no hit → black
+                color = np.array(scene_settings.background_color)
             else:
                 color = np.array(compute_color(curr_ray, closest_hit_point, closest_obj, objects, materials, camera, scene_settings))
 
             image_array[y, x] = np.clip(color, 0, 1)
-            curr_pixel = curr_pixel - camera.pixel_size * camera.width_v
-        row_head = row_head - camera.pixel_size * camera.height_v
+            curr_pixel = curr_pixel + camera.pixel_size * camera.width_v
+        row_head = row_head + camera.pixel_size * camera.height_v
 
-
-    # TODO: Implement the ray tracer
-
-    # Dummy result
-    #image_array = np.zeros((500, 500, 3))
-
-    # Save the output image
     save_image(image_array, args.output_image)
 
 

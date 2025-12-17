@@ -22,26 +22,11 @@ class Camera:
         screen_middle = position + looking_ray.V * screen_distance
         pixel_size = screen_width / width_pixels
         screen_height = pixel_size * height_pixels
-        screen_top_right = screen_middle + up_v *screen_height / 2 + screen_width_v * screen_width /2
-        top_right_pixel = screen_top_right - up_v * pixel_size / 2 - screen_width_v * pixel_size / 2
+        screen_top_left = screen_middle - up_v *screen_height / 2 - screen_width_v * screen_width /2
+        top_left_pixel = screen_top_left + up_v * pixel_size / 2 + screen_width_v * pixel_size / 2
 
         #make screen parameters accesible
-        self.top_right_pixel = top_right_pixel
+        self.top_left_pixel = top_left_pixel
         self.pixel_size = pixel_size
         self.height_v = up_v
         self.width_v = screen_width_v
-
-
-
-    """
-
-    if i choose to mobe the code back to ray tracer:
-        looking_ray = Ray(camera.position, camera.look_at)
-        screen_middle = position + looking_ray.V * camera.screen_distance
-        up_v = -(1/looking_ray.V)  #need to check if that works and normalize it!!!
-        screen_width_v = np.cross(up_v, looking_ray.V)
-        pixel_size = camera.screen_width / args.width
-        screen_height = pixel_size * args.height
-        screen_top_right = screen_middle + up_v *screen_height / 2 + screen_width_v * camera.screen_width /2
-        top_right_pixel = top_right -
-    """
