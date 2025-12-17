@@ -57,6 +57,24 @@ def save_image(image_array, output_filename): # <-- הוספת ארגומנט
     # שימוש בשם הקובץ שסופק
     image.save(output_filename) # <-- שימוש בארגומנט
 
+def transparency_color(scene_settings, lights,ray, materials, objects, camera, max_iters):
+    if max_iters <= 0:
+        return np.array(scene_settings.background_color)
+    t_min, hit_point, obj = ray.find_ray_closest_intersection(objects)
+    if obj is None:
+        return np.array(scene_settings.background_color)
+    
+    material = materials[obj.material_index -1]
+    local_color = np.array(color_by_lights(hit_point, obj, lights, objects, material, camera))
+    if material.transparency == 0:
+        return local_color
+    eps = 1e-4
+    new_origin = hit_point + eps * ray.V
+    behind_ray = Ray(new_origin, new_origin + ray.V)
+    behind_color = transparency_color(scene_settings, lights,behind_ray, materials, objects, camera, max_iters -1)
+    return material.transparency * behind_color + (1-material.transparency) * local_color
+
+
 
 def reflective_color(scene_settings, lights, obj,ray, materials, objects, camera, max_iters):
     if max_iters <= 0 or obj is None:
@@ -119,7 +137,7 @@ def compute_color(ray, closest_hit_point, closest_obj, objects, materials, camer
     #go by the calculation in the document
     reflected_color = reflective_color(scene_settings,lights, closest_obj,ray, materials, objects, camera, 4)
     return reflected_color #change to have everything
-    
+
 
 def main():
     parser = argparse.ArgumentParser(description='Python Ray Tracer')
