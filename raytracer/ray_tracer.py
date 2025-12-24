@@ -57,51 +57,42 @@ def save_image(image_array, output_filename): # <-- הוספת ארגומנט
     # שימוש בשם הקובץ שסופק
     image.save(output_filename) # <-- שימוש בארגומנט
 
-def transparency_color(scene_settings, lights,ray, materials, objects, camera, max_iters):
+def get_color(scene_settings, ray, lights, materials, objects, camera, max_iters):
     if max_iters <= 0:
         return np.array(scene_settings.background_color)
+
     t_min, hit_point, obj = ray.find_ray_closest_intersection(objects)
     if obj is None:
         return np.array(scene_settings.background_color)
-    
-    material = materials[obj.material_index -1]
-    local_color = np.array(color_by_lights(hit_point, obj, lights, objects, material, camera))
-    if material.transparency == 0:
-        return local_color
-    eps = 1e-4
-    new_origin = hit_point + eps * ray.V
-    behind_ray = Ray(new_origin, new_origin + ray.V)
-    behind_color = transparency_color(scene_settings, lights,behind_ray, materials, objects, camera, max_iters -1)
-    return material.transparency * behind_color + (1-material.transparency) * local_color
+        
+    material = materials[obj.material_index - 1]
+    reflection_color = np.array(material.reflection_color)
 
-
-
-def reflective_color(scene_settings, lights, obj,ray, materials, objects, camera, max_iters):
-    if max_iters <= 0 or obj is None:
-        return np.array(scene_settings.background_color)
-    
     normal, hit_point = obj.get_normal_from_ray(ray)
-    material = materials[obj.material_index -1]
     normal = normal / np.linalg.norm(normal)
     if np.dot(normal, ray.V) > 0:
         normal = -normal
     
-    local_color = np.array(color_by_lights(hit_point, obj, lights, objects, material, camera))
-    if np.all(material.reflection_color==0):
-        return local_color
+    current_color = np.array(color_by_lights(hit_point, obj, lights, objects, material, camera))
+    
+    # Reflection
+    if np.any(reflection_color > 0):
+        reflection_dir = ray.V - 2 * np.dot(ray.V, normal) * normal
+        reflection_dir = reflection_dir / np.linalg.norm(reflection_dir)
+        
+        eps = 1e-4
+        reflected_ray = Ray(hit_point + eps * normal, hit_point + eps * normal + reflection_dir)
+        reflection_color_val = get_color(scene_settings, reflected_ray, lights, materials, objects, camera, max_iters - 1)
+        current_color = (1 - reflection_color) * current_color + reflection_color * reflection_color_val
 
-    reflection_dir = ray.V - 2 * np.dot(ray.V, normal) * normal
-    reflection_dir = reflection_dir / np.linalg.norm(reflection_dir)
-
-    eps = 1e-4
-    reflected_ray = Ray(hit_point + eps * normal, hit_point + eps * normal + reflection_dir)
-
-    closest_obj = reflected_ray.find_ray_closest_object(objects)
-    if closest_obj is None:
-        reflected_color = np.array(scene_settings.background_color)
-    else:
-        reflected_color = np.array(reflective_color(scene_settings, lights, closest_obj, reflected_ray, materials, objects, camera, max_iters -1 ))
-    return (np.array([1,1,1]) - material.reflection_color) * local_color + reflected_color * material.reflection_color
+    # Transparency
+    if material.transparency > 0:
+        eps = 1e-4
+        new_origin = hit_point + eps * ray.V 
+        behind_ray = Ray(new_origin, new_origin + ray.V)
+        behind_color = get_color(scene_settings, behind_ray, lights, materials, objects, camera, max_iters - 1)
+        current_color = material.transparency * behind_color + (1 - material.transparency) * current_color
+    return current_color
 
 
 def color_by_lights(closest_hit_point, closest_obj, lights, objects, material, camera):
@@ -132,11 +123,8 @@ def create_light_list(objects):
     return lights
 
 def compute_color(ray, closest_hit_point, closest_obj, objects, materials, camera, scene_settings):
-    material = materials[closest_obj.material_index - 1]
     lights = create_light_list(objects)
-    #go by the calculation in the document
-    reflected_color = reflective_color(scene_settings,lights, closest_obj,ray, materials, objects, camera, 4)
-    return reflected_color #change to have everything
+    return get_color(scene_settings, ray, lights, materials, objects, camera, 4)
 
 
 def main():
