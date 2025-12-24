@@ -60,6 +60,7 @@ def save_image(image_array, output_filename): # <-- הוספת ארגומנט
     # שימוש בשם הקובץ שסופק
     image.save(output_filename) # <-- שימוש בארגומנט
 
+
 def get_color(scene_settings, ray, lights, materials, objects, camera, max_iters):
     if max_iters <= 0:
         return np.array(scene_settings.background_color)
@@ -69,16 +70,26 @@ def get_color(scene_settings, ray, lights, materials, objects, camera, max_iters
         return np.array(scene_settings.background_color)
         
     material = materials[obj.material_index - 1]
-    reflection_color = np.array(material.reflection_color)
-
+    
     normal, hit_point = obj.get_normal_from_ray(ray)
     normal = normal / np.linalg.norm(normal)
+    
     if np.dot(normal, ray.V) > 0:
         normal = -normal
     
-    current_color = np.array(color_by_lights(hit_point, obj, lights, objects, material, camera, scene_settings))
-    
-    # Reflection
+    diffuse_specular = np.array(color_by_lights(hit_point, obj, normal, lights, objects, material, camera, scene_settings))
+    current_color = diffuse_specular
+
+    if material.transparency > 0:
+        eps = 1e-4
+        new_origin = hit_point + (ray.V * eps) 
+        
+        behind_ray = Ray(new_origin, new_origin + ray.V)
+        behind_color = get_color(scene_settings, behind_ray, lights, materials, objects, camera, max_iters - 1)
+        
+        current_color = material.transparency * behind_color + (1 - material.transparency) * current_color
+
+    reflection_color = np.array(material.reflection_color)
     if np.any(reflection_color > 0):
         reflection_dir = ray.V - 2 * np.dot(ray.V, normal) * normal
         reflection_dir = reflection_dir / np.linalg.norm(reflection_dir)
@@ -86,15 +97,9 @@ def get_color(scene_settings, ray, lights, materials, objects, camera, max_iters
         eps = 1e-4
         reflected_ray = Ray(hit_point + eps * normal, hit_point + eps * normal + reflection_dir)
         reflection_color_val = get_color(scene_settings, reflected_ray, lights, materials, objects, camera, max_iters - 1)
+
         current_color = (1 - reflection_color) * current_color + reflection_color * reflection_color_val
 
-    # Transparency
-    if material.transparency > 0:
-        eps = 1e-4
-        new_origin = hit_point + eps * ray.V 
-        behind_ray = Ray(new_origin, new_origin + ray.V)
-        behind_color = get_color(scene_settings, behind_ray, lights, materials, objects, camera, max_iters - 1)
-        current_color = material.transparency * behind_color + (1 - material.transparency) * current_color
     return current_color
 
 def get_light_plane_axes(light_dir):
@@ -116,57 +121,53 @@ def get_light_plane_axes(light_dir):
     V = V / np.linalg.norm(V)
 
     return U, V
-
-def color_by_lights(closest_hit_point, closest_obj, lights, objects, material, camera,scene_settings):
+def color_by_lights(closest_hit_point, closest_obj, normal, lights, objects, material, camera, scene_settings):
     eps = 1e-4
     colors = np.array([0.0, 0.0, 0.0])
 
-    normal = closest_obj.get_normal_from_hit_point(closest_hit_point)
     observer_ray = Ray(closest_hit_point, camera.position)
 
-    if np.dot(normal, observer_ray.V) < 0:
-        normal = -normal
-
     for light in lights:
-
-        direction_for_grid = closest_hit_point - light.position 
+        direction_for_grid = closest_hit_point - light.position
         right, up = get_light_plane_axes(direction_for_grid)
+
         N = int(scene_settings.root_number_shadow_rays)
-        cell_size = (light.radius * 2) / N
+        cell_size = (2 * light.radius) / N
         top_left = light.position - (light.radius * right) - (light.radius * up)
+
         rays_hit = 0
         total_rays = N * N
+
         #for every cell in grid
         for i in range(N):
             for j in range(N):
                 current_u = (i + random.uniform(0, 1)) * cell_size
                 current_v = (j + random.uniform(0, 1)) * cell_size
-                
                 point_on_grid = top_left + (current_u * right) + (current_v * up)
-                shadow_ray = Ray(closest_hit_point + eps * normal, point_on_grid)
+
+                shadow_ray = Ray(closest_hit_point, point_on_grid)
+                shadow_ray.camera_point = closest_hit_point + eps * shadow_ray.V
                 dist_to_light = np.linalg.norm(point_on_grid - closest_hit_point)
-                
-                if(shadow_ray.is_visible(objects, dist_to_light)):
+
+                if shadow_ray.is_visible(objects, dist_to_light):
                     rays_hit += 1
 
         hit_ratio = rays_hit / total_rays
-        light_intensity = (1 - light.shadow_intensity) * 1 + light.shadow_intensity * hit_ratio
+        light_intensity = (1 - light.shadow_intensity) + light.shadow_intensity * hit_ratio
 
-        if light_intensity > 0 :
+        if light_intensity > 0:
             light_vec = light.position - closest_hit_point
-            dist_to_center = np.linalg.norm(light_vec)
-            light_dir = light_vec / dist_to_center
+            light_dir = light_vec / np.linalg.norm(light_vec)
 
             diff_angle = max(0.0, np.dot(normal, light_dir))
             diffuse_light = np.array(light.color) * np.array(material.diffuse_color) * diff_angle
 
-            reflected_ray = 2 * np.dot(light_dir, normal) * normal - light_dir
-            reflected_ray /= np.linalg.norm(reflected_ray)
-            
-            spec_angle = max(0.0, np.dot(reflected_ray, observer_ray.V))
-            specular_light = np.array(light.color) * np.array(material.specular_color) * (spec_angle ** material.shininess) * light.specular_intensity
+            reflected_ray_dir = 2 * np.dot(light_dir, normal) * normal - light_dir
+            spec_angle = max(0.0, np.dot(reflected_ray_dir, observer_ray.V))
+            specular_light = np.array(light.color)* np.array(material.specular_color)* (spec_angle ** material.shininess)* light.specular_intensity
             colors += light_intensity * (diffuse_light + specular_light)
     return colors
+
 
 def create_light_list(objects):
     #probably this is the function to change for soft shadows
