@@ -94,16 +94,38 @@ def get_color(scene_settings, ray, lights, materials, objects, camera, max_iters
         current_color = material.transparency * behind_color + (1 - material.transparency) * current_color
     return current_color
 
+def get_light_plane_axes(light_dir):
+    """Return U, V of the plane"""
+    light_dir = light_dir / np.linalg.norm(light_dir)
+    
+    #choose helper vector
+    if abs(light_dir[0]) < 0.1 and abs(light_dir[2]) < 0.1:
+        helper = np.array([1.0, 0.0, 0.0]) 
+    else:
+        helper = np.array([0.0, 1.0, 0.0]) 
+        
+    #find U vertical to L
+    U = np.cross(helper, light_dir)
+    U = U / np.linalg.norm(U)
+
+    #find V vertical to L and U
+    V = np.cross(light_dir, U)
+    V = V / np.linalg.norm(V)
+
+    return U, V
 
 def color_by_lights(closest_hit_point, closest_obj, lights, objects, material, camera):
     eps = 1e-4
     colors = np.array([0.0, 0.0, 0.0])
     for light in lights:
+
         normal = closest_obj.get_normal_from_hit_point(closest_hit_point)
         observer_ray = Ray(closest_hit_point, camera.position)
+
         if np.dot(normal, observer_ray.V) < 0:
             normal = -normal
         light_ray = Ray(closest_hit_point + eps * normal, light.position)
+
         is_visible = light_ray.is_visible(objects)
         light_influence = 1 if is_visible else (1-light.shadow_intensity)
         if light_influence > 0 :
@@ -123,9 +145,9 @@ def create_light_list(objects):
             lights.append(obj)
     return lights
 
-def compute_color(ray, closest_hit_point, closest_obj, objects, materials, camera, scene_settings):
+def compute_color(ray, objects, materials, camera, scene_settings):
     lights = create_light_list(objects)
-    return get_color(scene_settings, ray, lights, materials, objects, camera, 4)
+    return get_color(scene_settings, ray, lights, materials, objects, camera, scene_settings.max_recursions)
 
 
 def main():
@@ -151,7 +173,7 @@ def main():
             if closest_obj is None:
                 color = np.array(scene_settings.background_color)
             else:
-                color = np.array(compute_color(curr_ray, closest_hit_point, closest_obj, objects, materials, camera, scene_settings))
+                color = np.array(compute_color(curr_ray, objects, materials, camera, scene_settings))
 
             image_array[y, x] = np.clip(color, 0, 1)
             curr_pixel = curr_pixel + camera.pixel_size * camera.width_v
