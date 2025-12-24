@@ -32,7 +32,7 @@ class Ray:
             return None, None, None
         return t_min, closest_hit_point, closest_obj
     
-    def is_visible(self, objects):
+    def is_visible(self, objects, max_distance):
         surface_types = (Sphere, Cube, InfinitePlane)
         for obj in objects:
             if not isinstance(obj, surface_types):
@@ -40,7 +40,7 @@ class Ray:
             hit_point, t = obj.find_intersection(self)
             if hit_point is None or t is None:
                 continue
-            else:
+            if t < max_distance:
                 return False
         return True
 

@@ -1,6 +1,8 @@
 import argparse
 from PIL import Image
 import numpy as np
+import random
+from tqdm import tqdm
 
 from camera import Camera
 from light import Light
@@ -10,6 +12,7 @@ from surfaces.cube import Cube
 from surfaces.infinite_plane import InfinitePlane
 from surfaces.sphere import Sphere
 from ray import Ray
+
 
 
 def parse_scene_file(file_path, width_pixels, height_pixels):
@@ -73,7 +76,7 @@ def get_color(scene_settings, ray, lights, materials, objects, camera, max_iters
     if np.dot(normal, ray.V) > 0:
         normal = -normal
     
-    current_color = np.array(color_by_lights(hit_point, obj, lights, objects, material, camera))
+    current_color = np.array(color_by_lights(hit_point, obj, lights, objects, material, camera, scene_settings))
     
     # Reflection
     if np.any(reflection_color > 0):
@@ -114,27 +117,53 @@ def get_light_plane_axes(light_dir):
 
     return U, V
 
-def color_by_lights(closest_hit_point, closest_obj, lights, objects, material, camera):
+def color_by_lights(closest_hit_point, closest_obj, lights, objects, material, camera,scene_settings):
     eps = 1e-4
     colors = np.array([0.0, 0.0, 0.0])
+
+    normal = closest_obj.get_normal_from_hit_point(closest_hit_point)
+    observer_ray = Ray(closest_hit_point, camera.position)
+
+    if np.dot(normal, observer_ray.V) < 0:
+        normal = -normal
+
     for light in lights:
 
-        normal = closest_obj.get_normal_from_hit_point(closest_hit_point)
-        observer_ray = Ray(closest_hit_point, camera.position)
+        direction_for_grid = closest_hit_point - light.position 
+        right, up = get_light_plane_axes(direction_for_grid)
+        N = int(scene_settings.root_number_shadow_rays)
+        cell_size = (light.radius * 2) / N
+        top_left = light.position - (light.radius * right) - (light.radius * up)
+        rays_hit = 0
+        total_rays = N * N
+        #for every cell in grid
+        for i in range(N):
+            for j in range(N):
+                current_u = (i + random.uniform(0, 1)) * cell_size
+                current_v = (j + random.uniform(0, 1)) * cell_size
+                
+                point_on_grid = top_left + (current_u * right) + (current_v * up)
+                shadow_ray = Ray(closest_hit_point + eps * normal, point_on_grid)
+                dist_to_light = np.linalg.norm(point_on_grid - closest_hit_point)
+                
+                if(shadow_ray.is_visible(objects, dist_to_light)):
+                    rays_hit += 1
 
-        if np.dot(normal, observer_ray.V) < 0:
-            normal = -normal
-        light_ray = Ray(closest_hit_point + eps * normal, light.position)
+        hit_ratio = rays_hit / total_rays
+        light_intensity = (1 - light.shadow_intensity) * 1 + light.shadow_intensity * hit_ratio
 
-        is_visible = light_ray.is_visible(objects)
-        light_influence = 1 if is_visible else (1-light.shadow_intensity)
-        if light_influence > 0 :
-            diff_angle = max(0.0, np.dot(normal, light_ray.V))
-            diffuse_light = [light.color[i]*material.diffuse_color[i]*diff_angle for i in range(3)]
-            reflected_ray = light_ray.V - 2*np.dot(light_ray.V, normal)*normal
+        if light_intensity > 0 :
+            light_vec = light.position - closest_hit_point
+            dist_to_center = np.linalg.norm(light_vec)
+            light_dir = light_vec / dist_to_center
+
+            diff_angle = max(0.0, np.dot(normal, light_dir))
+            diffuse_light = np.array(light.color) * np.array(material.diffuse_color) * diff_angle
+
+            reflected_ray = 2 * np.dot(light_dir, normal) * normal - light_dir
             spec_angle = max(0.0, np.dot(reflected_ray, observer_ray.V))
-            specular_light = [light.specular_intensity*light.color[i]*material.specular_color[i]*spec_angle**material.shininess for i in range(3)]
-            colors = [colors[i] + light_influence*diffuse_light[i] + light_influence*specular_light[i] for i in range(3)]
+            specular_light = np.array(light.color) * np.array(material.specular_color) * (spec_angle ** material.shininess) * light.specular_intensity
+            colors += light_intensity * (diffuse_light + specular_light)
     return colors
 
 def create_light_list(objects):
@@ -165,7 +194,8 @@ def main():
     image_array = np.zeros((args.height, args.width, 3), dtype=float)
     #create pixel grid
     row_head = camera.top_left_pixel
-    for y in range(args.height):
+    for y in tqdm(range(args.height), desc="Rendering"):
+    #for y in range(args.height):
         curr_pixel = row_head
         for x in range(args.width):
             curr_ray = Ray(camera.position, curr_pixel)
