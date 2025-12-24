@@ -161,6 +161,8 @@ def color_by_lights(closest_hit_point, closest_obj, lights, objects, material, c
             diffuse_light = np.array(light.color) * np.array(material.diffuse_color) * diff_angle
 
             reflected_ray = 2 * np.dot(light_dir, normal) * normal - light_dir
+            reflected_ray /= np.linalg.norm(reflected_ray)
+            
             spec_angle = max(0.0, np.dot(reflected_ray, observer_ray.V))
             specular_light = np.array(light.color) * np.array(material.specular_color) * (spec_angle ** material.shininess) * light.specular_intensity
             colors += light_intensity * (diffuse_light + specular_light)
@@ -174,8 +176,7 @@ def create_light_list(objects):
             lights.append(obj)
     return lights
 
-def compute_color(ray, objects, materials, camera, scene_settings):
-    lights = create_light_list(objects)
+def compute_color(ray, objects, materials, camera, scene_settings, lights):
     return get_color(scene_settings, ray, lights, materials, objects, camera, scene_settings.max_recursions)
 
 
@@ -194,16 +195,13 @@ def main():
     image_array = np.zeros((args.height, args.width, 3), dtype=float)
     #create pixel grid
     row_head = camera.top_left_pixel
+    lights = create_light_list(objects)
     for y in tqdm(range(args.height), desc="Rendering"):
     #for y in range(args.height):
         curr_pixel = row_head
         for x in range(args.width):
             curr_ray = Ray(camera.position, curr_pixel)
-            t_min, closest_hit_point, closest_obj = curr_ray.find_ray_closest_intersection(objects)
-            if closest_obj is None:
-                color = np.array(scene_settings.background_color)
-            else:
-                color = np.array(compute_color(curr_ray, objects, materials, camera, scene_settings))
+            color = np.array(compute_color(curr_ray, objects, materials, camera, scene_settings, lights))
 
             image_array[y, x] = np.clip(color, 0, 1)
             curr_pixel = curr_pixel + camera.pixel_size * camera.width_v
