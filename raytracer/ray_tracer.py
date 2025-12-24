@@ -14,7 +14,6 @@ from surfaces.sphere import Sphere
 from ray import Ray
 
 
-
 def parse_scene_file(file_path, width_pixels, height_pixels):
     objects = []
     materials = []
@@ -34,12 +33,10 @@ def parse_scene_file(file_path, width_pixels, height_pixels):
                 scene_settings = SceneSettings(params[:3], params[3], params[4])
             elif obj_type == "mtl":
                 material = Material(params[:3], params[3:6], params[6:9], params[9], params[10])
-                #objects.append(material)
                 materials.append(material)
             elif obj_type == "sph":
                 sphere = Sphere(params[:3], params[3], int(params[4]))
                 objects.append(sphere)
-                #print(sphere.material_index)
             elif obj_type == "pln":
                 plane = InfinitePlane(params[:3], params[3], int(params[4]))
                 objects.append(plane)
@@ -54,11 +51,10 @@ def parse_scene_file(file_path, width_pixels, height_pixels):
     return camera, scene_settings, objects, materials
 
 
-def save_image(image_array, output_filename): # <-- הוספת ארגומנט
+def save_image(image_array, output_filename):
     final_image = np.clip(image_array * 255, 0, 255).astype(np.uint8)
     image = Image.fromarray(final_image)
-    # שימוש בשם הקובץ שסופק
-    image.save(output_filename) # <-- שימוש בארגומנט
+    image.save(output_filename)
 
 
 def get_color(scene_settings, ray, lights, materials, objects, camera, max_iters):
@@ -77,18 +73,19 @@ def get_color(scene_settings, ray, lights, materials, objects, camera, max_iters
     if np.dot(normal, ray.V) > 0:
         normal = -normal
     
-    diffuse_specular = np.array(color_by_lights(hit_point, obj, normal, lights, objects, material, camera, scene_settings))
-    current_color = diffuse_specular
+    current_color = np.array(color_by_lights(hit_point, obj, normal, lights, objects, material, camera, scene_settings, materials))
 
+    # Transparency
     if material.transparency > 0:
         eps = 1e-4
-        new_origin = hit_point + (ray.V * eps) 
+        new_origin = hit_point + (ray.V * eps)
         
         behind_ray = Ray(new_origin, new_origin + ray.V)
         behind_color = get_color(scene_settings, behind_ray, lights, materials, objects, camera, max_iters - 1)
         
-        current_color = material.transparency * behind_color + (1 - material.transparency) * current_color
+        current_color += material.transparency * behind_color
 
+    # Reflection
     reflection_color = np.array(material.reflection_color)
     if np.any(reflection_color > 0):
         reflection_dir = ray.V - 2 * np.dot(ray.V, normal) * normal
@@ -102,26 +99,25 @@ def get_color(scene_settings, ray, lights, materials, objects, camera, max_iters
 
     return current_color
 
+
 def get_light_plane_axes(light_dir):
-    """Return U, V of the plane"""
     light_dir = light_dir / np.linalg.norm(light_dir)
     
-    #choose helper vector
     if abs(light_dir[0]) < 0.1 and abs(light_dir[2]) < 0.1:
         helper = np.array([1.0, 0.0, 0.0]) 
     else:
         helper = np.array([0.0, 1.0, 0.0]) 
         
-    #find U vertical to L
     U = np.cross(helper, light_dir)
     U = U / np.linalg.norm(U)
 
-    #find V vertical to L and U
     V = np.cross(light_dir, U)
     V = V / np.linalg.norm(V)
 
     return U, V
-def color_by_lights(closest_hit_point, closest_obj, normal, lights, objects, material, camera, scene_settings):
+
+
+def color_by_lights(closest_hit_point, closest_obj, normal, lights, objects, material, camera, scene_settings, materials):
     eps = 1e-4
     colors = np.array([0.0, 0.0, 0.0])
 
@@ -132,21 +128,25 @@ def color_by_lights(closest_hit_point, closest_obj, normal, lights, objects, mat
         right, up = get_light_plane_axes(direction_for_grid)
 
         N = int(scene_settings.root_number_shadow_rays)
-        cell_size = (2 * light.radius) / N
-        top_left = light.position - (light.radius * right) - (light.radius * up)
+        
+        grid_width = light.radius
+        cell_size = grid_width / N
+        
+        top_left = light.position - (grid_width / 2.0 * right) - (grid_width / 2.0 * up)
 
         rays_hit = 0
         total_rays = N * N
 
-        #for every cell in grid
         for i in range(N):
             for j in range(N):
                 current_u = (i + random.uniform(0, 1)) * cell_size
                 current_v = (j + random.uniform(0, 1)) * cell_size
+                
                 point_on_grid = top_left + (current_u * right) + (current_v * up)
 
                 shadow_ray = Ray(closest_hit_point, point_on_grid)
-                shadow_ray.camera_point = closest_hit_point + eps * shadow_ray.V
+                shadow_ray.camera_point = closest_hit_point + eps * normal 
+
                 dist_to_light = np.linalg.norm(point_on_grid - closest_hit_point)
 
                 if shadow_ray.is_visible(objects, dist_to_light):
@@ -159,23 +159,30 @@ def color_by_lights(closest_hit_point, closest_obj, normal, lights, objects, mat
             light_vec = light.position - closest_hit_point
             light_dir = light_vec / np.linalg.norm(light_vec)
 
+            # Diffuse
             diff_angle = max(0.0, np.dot(normal, light_dir))
-            diffuse_light = np.array(light.color) * np.array(material.diffuse_color) * diff_angle
+            
+            diffuse_factor = 1 - material.transparency
+            diffuse_light = np.array(light.color) * np.array(material.diffuse_color) * diff_angle * diffuse_factor
 
+            # Specular
             reflected_ray_dir = 2 * np.dot(light_dir, normal) * normal - light_dir
             spec_angle = max(0.0, np.dot(reflected_ray_dir, observer_ray.V))
-            specular_light = np.array(light.color)* np.array(material.specular_color)* (spec_angle ** material.shininess)* light.specular_intensity
+            
+            specular_light = np.array(light.color) * np.array(material.specular_color) * (spec_angle ** material.shininess) * light.specular_intensity
+            
             colors += light_intensity * (diffuse_light + specular_light)
+            
     return colors
 
 
 def create_light_list(objects):
-    #probably this is the function to change for soft shadows
     lights = []
     for obj in objects:
         if isinstance(obj, Light):
             lights.append(obj)
     return lights
+
 
 def compute_color(ray, objects, materials, camera, scene_settings, lights):
     return get_color(scene_settings, ray, lights, materials, objects, camera, scene_settings.max_recursions)
@@ -188,17 +195,14 @@ def main():
     parser.add_argument('--width', type=int, default=500, help='Image width')
     parser.add_argument('--height', type=int, default=500, help='Image height')
     args = parser.parse_args()
-    # Parse the scene file
-    
-    
+
     camera, scene_settings, objects, materials = parse_scene_file(args.scene_file, args.width, args.height)
 
     image_array = np.zeros((args.height, args.width, 3), dtype=float)
-    #create pixel grid
     row_head = camera.top_left_pixel
     lights = create_light_list(objects)
+    
     for y in tqdm(range(args.height), desc="Rendering"):
-    #for y in range(args.height):
         curr_pixel = row_head
         for x in range(args.width):
             curr_ray = Ray(camera.position, curr_pixel)
