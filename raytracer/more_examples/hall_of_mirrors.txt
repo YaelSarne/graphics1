@@ -1,0 +1,45 @@
+# Scene 5: Hall of Mirrors
+# Camera: Eye level, looking straight ahead
+cam 		0	0	10	0	0	0	0	1	0	1.0	1.0
+
+# Settings: Black background, max recursion is crucial here
+set 		0	0	0	4	10
+
+# --- MATERIALS ---
+
+# MTL 1: Mirror Floor/Ceiling
+mtl		0.2	0.2	0.2	0.5	0.5	0.5	0.7	0.7	0.7	50	0
+
+# MTL 2: Semi-Transparent Green Cube
+mtl		0.1	0.8	0.1	0.5	0.5	0.5	0.1	0.1	0.1	50	0.7
+
+# MTL 3: Opaque Purple Cube
+mtl		0.6	0.1	0.8	0.3	0.3	0.3	0.2	0.2	0.2	20	0
+
+# MTL 4: Pure Glass Cube
+mtl		0	0	0	0.9	0.9	0.9	0.1	0.1	0.1	100	0.95
+
+# --- OBJECTS ---
+
+# Floor (Mirror)
+pln		0	1	0	-2	1
+
+# Ceiling (Mirror) - Normal pointing down (0, -1, 0), Offset +2
+pln		0	-1	0	-3	1
+
+# Left Wall (Matte Grey to give context)
+pln		1	0	0	-5	3
+
+# Object 1: Green Ghost Cube (Front Left)
+box		-1.5	-0.5	5	1.5	2
+
+# Object 2: Purple Solid Cube (Back Right)
+box		1.5	-0.5	2	1.5	3
+
+# Object 3: Clear Glass Block (Center floating)
+box		0	0.5	0	1.0	4
+
+# --- LIGHTS ---
+
+# Light inside the corridor
+lgt		0	0	5	1	1	1	1	1	0.5

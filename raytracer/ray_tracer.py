@@ -12,7 +12,7 @@ from surfaces.cube import Cube
 from surfaces.infinite_plane import InfinitePlane
 from surfaces.sphere import Sphere
 from ray import Ray
-
+import time
 
 def parse_scene_file(file_path, width_pixels, height_pixels):
     objects = []
@@ -66,9 +66,8 @@ def get_color(scene_settings, ray, lights, materials, objects, camera, max_iters
         return np.array(scene_settings.background_color)
         
     material = materials[obj.material_index - 1]
-    
-    normal, hit_point = obj.get_normal_from_ray(ray)
-    normal = normal / np.linalg.norm(normal)
+
+    normal = obj.get_normal_from_hit_point(hit_point)
     
     if np.dot(normal, ray.V) > 0:
         normal = -normal
@@ -121,7 +120,6 @@ def color_by_lights(closest_hit_point, normal, lights, objects, material, scene_
     eps = 1e-4
     colors = np.array([0.0, 0.0, 0.0])
 
-    #observer_ray = Ray(closest_hit_point, camera.position)
     observer_v = -ray.V 
 
     for light in lights:
@@ -132,29 +130,25 @@ def color_by_lights(closest_hit_point, normal, lights, objects, material, scene_
         
         grid_width = light.radius
         cell_size = grid_width / N
-        
         top_left = light.position - (grid_width / 2.0 * right) - (grid_width / 2.0 * up)
-
-        rays_hit = 0
+        total_light_received = 0.0
         total_rays = N * N
 
         for i in range(N):
             for j in range(N):
-                current_u = (i + random.uniform(0, 1)) * cell_size
-                current_v = (j + random.uniform(0, 1)) * cell_size
+                current_u = (i + random.random()) * cell_size
+                current_v = (j + random.random()) * cell_size
                 
                 point_on_grid = top_left + (current_u * right) + (current_v * up)
-
                 light_vec = point_on_grid - closest_hit_point
                 dist_to_light = np.linalg.norm(light_vec)
                 to_light_dir = light_vec / dist_to_light
                 shadow_origin = closest_hit_point + (eps * to_light_dir)
                 shadow_ray = Ray(shadow_origin, point_on_grid)
+                intensity = shadow_ray.visible_factor(objects, dist_to_light, materials)
+                total_light_received += intensity
 
-                if shadow_ray.is_visible(objects, dist_to_light, materials):
-                    rays_hit += 1
-
-        hit_ratio = rays_hit / total_rays
+        hit_ratio = total_light_received / total_rays
         light_intensity = (1 - light.shadow_intensity) + light.shadow_intensity * hit_ratio
         if light_intensity > 0:
             light_vec = light.position - closest_hit_point
@@ -167,7 +161,6 @@ def color_by_lights(closest_hit_point, normal, lights, objects, material, scene_
             # Specular
             reflected_ray_dir = 2 * np.dot(light_dir, normal) * normal - light_dir
             spec_angle = max(0.0, np.dot(reflected_ray_dir, observer_v))
-            
             specular_light = np.array(light.color) * np.array(material.specular_color) * (spec_angle ** material.shininess) * light.specular_intensity
             
             colors += light_intensity * (diffuse_light + specular_light)
@@ -196,22 +189,36 @@ def main():
     args = parser.parse_args()
 
     camera, scene_settings, objects, materials = parse_scene_file(args.scene_file, args.width, args.height)
+    lights = []
+    surfaces = []
+    for obj in objects:
+        if isinstance(obj, Light):
+            lights.append(obj)
+        else:
+            surfaces.append(obj)
 
     image_array = np.zeros((args.height, args.width, 3), dtype=float)
     row_head = camera.top_left_pixel
     lights = create_light_list(objects)
     
+    #delete
+    start_time = time.time()
+
     for y in tqdm(range(args.height), desc="Rendering"):
         curr_pixel = row_head
         for x in range(args.width):
             curr_ray = Ray(camera.position, curr_pixel)
-            color = np.array(compute_color(curr_ray, objects, materials, camera, scene_settings, lights))
+            color = np.array(compute_color(curr_ray, surfaces, materials, camera, scene_settings, lights))
 
             image_array[y, x] = np.clip(color, 0, 1)
             curr_pixel = curr_pixel + camera.pixel_size * camera.width_v
         row_head = row_head + camera.pixel_size * camera.height_v
 
     save_image(image_array, args.output_image)
+
+    #print to delete:
+    end_time = time.time()
+    print(f"Finished rendering in {end_time - start_time:.4f} seconds.")
 
 
 if __name__ == '__main__':

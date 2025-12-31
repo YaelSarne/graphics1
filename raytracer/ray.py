@@ -12,40 +12,33 @@ class Ray:
         self.V = self.pixel_point - self.camera_point
         self.V = self.V / np.linalg.norm(self.V)
     
-    def find_ray_closest_intersection(self, objects):
+    def find_ray_closest_intersection(self, surfaces):
         t_min = math.inf
-        closest_hit_point = np.array([math.inf,math.inf,math.inf], dtype=float)
         closest_obj = None
-        surface_types = (Sphere, Cube, InfinitePlane)
 
-        for obj in objects:
-            if not isinstance(obj, surface_types):
-                continue
-            hit_point, t = obj.find_intersection(self)
-            if hit_point is None or t is None:
-                continue
-            if t < t_min:
+        for obj in surfaces:
+            t = obj.find_intersection(self)
+            if t is not None and t < t_min:
                 t_min = t
-                closest_hit_point = hit_point
                 closest_obj = obj
         if closest_obj is None:
             return None, None, None
+        
+        closest_hit_point = self.camera_point + t_min * self.V
         return t_min, closest_hit_point, closest_obj
     
-    def is_visible(self, objects, max_distance, materials):
-        surface_types = (Sphere, Cube, InfinitePlane)
+    def visible_factor(self, objects, max_distance, materials):
+        light_factor = 1.0
         for obj in objects:
-            if not isinstance(obj, surface_types):
-                continue
-            hit_point, t = obj.find_intersection(self)
-            if hit_point is None or t is None:
+            t = obj.find_intersection(self)
+            if t is None:
                 continue
             if 1e-4 < t < max_distance:
-                #mat = materials[obj.material_index - 1]
-                #if mat.transparency > 0:
-                 #   continue
-                return False
-        return True
+                mat = materials[obj.material_index - 1]
+                light_factor *= mat.transparency 
+                if light_factor == 0:
+                    return 0.0
+        return light_factor
 
         
     def find_ray_closest_object(self, objects):

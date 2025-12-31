@@ -12,28 +12,13 @@ class InfinitePlane:
         epsilon = 1e-4
         V_N_dot_product = np.dot(ray.V, self.normal)
         if abs(V_N_dot_product) < epsilon:
-            return None, None # Ray is parrallel to plane
+            return None # Ray is parrallel to plane
         
         t = (self.offset - np.dot(ray.camera_point, self.normal)) / V_N_dot_product
         if t < epsilon: # plane is behind camera
-            return None, None
-        hit_point = ray.camera_point + t * ray.V
-        return hit_point, t
+            return None
+        return t
     
-    def get_hit_point(self, ray):
-        hit_point, t = self.find_intersection(ray)
-        return hit_point
-
     def get_normal_from_hit_point(self, hit_point):
         return self.normal
-
-    def get_normal_from_ray(self, ray):
-        hit_point = self.get_hit_point(ray)
-        if hit_point is None:
-            return None, None
-        normal = self.normal
-        if np.dot(ray.V, normal) > 0:
-            normal = -normal
-        return normal, hit_point
-
         

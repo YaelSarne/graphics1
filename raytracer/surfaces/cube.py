@@ -22,7 +22,7 @@ class Cube:
         for i in range(3):
             if abs(ray.V[i]) < 1e-6: # ray parrallel 
                 if ray.camera_point[i] < min_bounds[i] or ray.camera_point[i] > max_bounds[i]:
-                    return None, None
+                    return None
                 # always in bound
                 t1 = -math.inf 
                 t2 = math.inf
@@ -36,19 +36,13 @@ class Cube:
                 t_far = min(t_far, t2)
         
         if t_near > t_far:
-            return None, None
+            return None
         if t_far < epsilon: #t_min = 0, cube is behind camera
-            return None, None
+            return None
         if t_near > epsilon:
-            t = t_near
+            return t_near
         else:
-            t = t_far
-        hit_point = ray.camera_point + t*ray.V
-        return hit_point, t
-    
-    def get_hit_point(self, ray):
-        hit_point, t = self.find_intersection(ray)
-        return hit_point
+            return t_far
 
     def get_normal_from_hit_point(self, hit_point):
         if hit_point is None:
@@ -70,9 +64,3 @@ class Cube:
 
         return normal
     
-    def get_normal_from_ray(self, ray):
-        hit_point = self.get_hit_point(ray)
-        if hit_point is None:
-            return None, None
-        normal = self.get_normal_from_hit_point(hit_point)
-        return normal, hit_point
