@@ -41,9 +41,9 @@ class Ray:
             if hit_point is None or t is None:
                 continue
             if 1e-4 < t < max_distance:
-                mat = materials[obj.material_index - 1]
-                if mat.transparency > 0:
-                    continue
+                #mat = materials[obj.material_index - 1]
+                #if mat.transparency > 0:
+                 #   continue
                 return False
         return True
 

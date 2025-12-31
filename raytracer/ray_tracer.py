@@ -96,7 +96,6 @@ def get_color(scene_settings, ray, lights, materials, objects, camera, max_iters
         reflection_color_val = get_color(scene_settings, reflected_ray, lights, materials, objects, camera, max_iters - 1)
 
         current_color = current_color + (reflection_color * reflection_color_val)
-        #current_color = (1 - reflection_color) * current_color + reflection_color * reflection_color_val
 
     return current_color
 
