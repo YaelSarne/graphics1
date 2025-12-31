@@ -9,6 +9,7 @@ class Cube:
 
     def find_intersection(self, ray):
         """Find cube intersection with ray"""
+        epsilon = 1e-5
         half = self.scale/2.0
 
         min_bounds = self.position - half
@@ -36,12 +37,12 @@ class Cube:
         
         if t_near > t_far:
             return None, None
-        if t_far < 0: #t_min = 0, cube is behind camera
+        if t_far < epsilon: #t_min = 0, cube is behind camera
             return None, None
-        if t_near < 0:
-            t = t_far
-        else:
+        if t_near > epsilon:
             t = t_near
+        else:
+            t = t_far
         hit_point = ray.camera_point + t*ray.V
         return hit_point, t
     

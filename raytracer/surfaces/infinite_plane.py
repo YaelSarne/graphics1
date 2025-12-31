@@ -9,13 +9,13 @@ class InfinitePlane:
         self.material_index = material_index
 
     def find_intersection(self, ray):
+        epsilon = 1e-4
         V_N_dot_product = np.dot(ray.V, self.normal)
-        if V_N_dot_product == 0: # Ray is parrallel to plane
-            if np.dot(ray.camera_point, self.normal) == self.offset: #camera point is on plane
-                return ray.camera_point, 0.0
-            return None, None
+        if abs(V_N_dot_product) < epsilon:
+            return None, None # Ray is parrallel to plane
+        
         t = (self.offset - np.dot(ray.camera_point, self.normal)) / V_N_dot_product
-        if t < 0: # plane is behind camera
+        if t < epsilon: # plane is behind camera
             return None, None
         hit_point = ray.camera_point + t * ray.V
         return hit_point, t

@@ -15,7 +15,7 @@ class Camera:
         raw_up_ray = Ray(position, up_vector)
         screen_width_v = np.cross(looking_ray.V, raw_up_ray.V)
         screen_width_v /= np.linalg.norm(screen_width_v)
-        up_v = np.cross(screen_width_v, looking_ray.V)
+        up_v = np.cross(looking_ray.V, screen_width_v)
         up_v /= np.linalg.norm(up_v)
         
         #represent screen

@@ -9,7 +9,7 @@ class Sphere:
 
     def find_intersection(self, ray):
         """Find sphere intersection with ray using geometric method"""
-                    
+        epsilon = 1e-4
         L = self.position - ray.camera_point
  
         t_ca = np.dot(L, ray.V)
@@ -24,18 +24,17 @@ class Sphere:
         t1 = t_ca - t_hc
         t2 = t_ca + t_hc
 
-        if t1 >= 0 and t2 >= 0:
-            t = min(t1, t2)
-        elif t1 >= 0:
-            t = t1           
-        elif t2 >= 0:
-            t = t2
+        if t1 > epsilon:
+            t = t1
+        elif t2 > epsilon:
+            t = t2        
         else:
             return None, None
         
         hit_point = ray.camera_point + t * ray.V
 
         return hit_point, t
+    
 
     def get_normal_from_hit_point(self, hit_point):
         if hit_point is None:

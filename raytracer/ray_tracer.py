@@ -73,7 +73,7 @@ def get_color(scene_settings, ray, lights, materials, objects, camera, max_iters
     if np.dot(normal, ray.V) > 0:
         normal = -normal
     
-    current_color = np.array(color_by_lights(hit_point, obj, normal, lights, objects, material, camera, scene_settings, materials))
+    current_color = np.array(color_by_lights(hit_point, normal, lights, objects, material, scene_settings, materials, ray))
 
     # Transparency
     if material.transparency > 0:
@@ -83,7 +83,7 @@ def get_color(scene_settings, ray, lights, materials, objects, camera, max_iters
         behind_ray = Ray(new_origin, new_origin + ray.V)
         behind_color = get_color(scene_settings, behind_ray, lights, materials, objects, camera, max_iters - 1)
         
-        current_color += material.transparency * behind_color
+        current_color = material.transparency * behind_color + (1 - material.transparency)*current_color
 
     # Reflection
     reflection_color = np.array(material.reflection_color)
@@ -95,7 +95,8 @@ def get_color(scene_settings, ray, lights, materials, objects, camera, max_iters
         reflected_ray = Ray(hit_point + eps * normal, hit_point + eps * normal + reflection_dir)
         reflection_color_val = get_color(scene_settings, reflected_ray, lights, materials, objects, camera, max_iters - 1)
 
-        current_color = (1 - reflection_color) * current_color + reflection_color * reflection_color_val
+        current_color = current_color + (reflection_color * reflection_color_val)
+        #current_color = (1 - reflection_color) * current_color + reflection_color * reflection_color_val
 
     return current_color
 
@@ -117,11 +118,12 @@ def get_light_plane_axes(light_dir):
     return U, V
 
 
-def color_by_lights(closest_hit_point, closest_obj, normal, lights, objects, material, camera, scene_settings, materials):
+def color_by_lights(closest_hit_point, normal, lights, objects, material, scene_settings, materials,ray):
     eps = 1e-4
     colors = np.array([0.0, 0.0, 0.0])
 
-    observer_ray = Ray(closest_hit_point, camera.position)
+    #observer_ray = Ray(closest_hit_point, camera.position)
+    observer_v = -ray.V 
 
     for light in lights:
         direction_for_grid = closest_hit_point - light.position
@@ -144,17 +146,17 @@ def color_by_lights(closest_hit_point, closest_obj, normal, lights, objects, mat
                 
                 point_on_grid = top_left + (current_u * right) + (current_v * up)
 
-                shadow_ray = Ray(closest_hit_point, point_on_grid)
-                shadow_ray.camera_point = closest_hit_point + eps * shadow_ray.V 
+                light_vec = point_on_grid - closest_hit_point
+                dist_to_light = np.linalg.norm(light_vec)
+                to_light_dir = light_vec / dist_to_light
+                shadow_origin = closest_hit_point + (eps * to_light_dir)
+                shadow_ray = Ray(shadow_origin, point_on_grid)
 
-                dist_to_light = np.linalg.norm(point_on_grid - closest_hit_point)
-
-                if shadow_ray.is_visible(objects, dist_to_light):
+                if shadow_ray.is_visible(objects, dist_to_light, materials):
                     rays_hit += 1
 
         hit_ratio = rays_hit / total_rays
         light_intensity = (1 - light.shadow_intensity) + light.shadow_intensity * hit_ratio
-
         if light_intensity > 0:
             light_vec = light.position - closest_hit_point
             light_dir = light_vec / np.linalg.norm(light_vec)
@@ -165,12 +167,12 @@ def color_by_lights(closest_hit_point, closest_obj, normal, lights, objects, mat
 
             # Specular
             reflected_ray_dir = 2 * np.dot(light_dir, normal) * normal - light_dir
-            spec_angle = max(0.0, np.dot(reflected_ray_dir, observer_ray.V))
+            spec_angle = max(0.0, np.dot(reflected_ray_dir, observer_v))
             
             specular_light = np.array(light.color) * np.array(material.specular_color) * (spec_angle ** material.shininess) * light.specular_intensity
             
-            colors += light_intensity * (diffuse_light + specular_light) * (1 - material.transparency)
-            
+            colors += light_intensity * (diffuse_light + specular_light)
+        
     return colors
 
 
