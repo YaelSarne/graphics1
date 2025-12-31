@@ -2,7 +2,6 @@ import argparse
 from PIL import Image
 import numpy as np
 import random
-from tqdm import tqdm
 
 from camera import Camera
 from light import Light
@@ -12,7 +11,7 @@ from surfaces.cube import Cube
 from surfaces.infinite_plane import InfinitePlane
 from surfaces.sphere import Sphere
 from ray import Ray
-import time
+
 
 def parse_scene_file(file_path, width_pixels, height_pixels):
     objects = []
@@ -167,15 +166,6 @@ def color_by_lights(closest_hit_point, normal, lights, objects, material, scene_
         
     return colors
 
-
-def create_light_list(objects):
-    lights = []
-    for obj in objects:
-        if isinstance(obj, Light):
-            lights.append(obj)
-    return lights
-
-
 def compute_color(ray, objects, materials, camera, scene_settings, lights):
     return get_color(scene_settings, ray, lights, materials, objects, camera, scene_settings.max_recursions)
 
@@ -199,12 +189,8 @@ def main():
 
     image_array = np.zeros((args.height, args.width, 3), dtype=float)
     row_head = camera.top_left_pixel
-    lights = create_light_list(objects)
     
-    #delete
-    start_time = time.time()
-
-    for y in tqdm(range(args.height), desc="Rendering"):
+    for y in range(args.height):
         curr_pixel = row_head
         for x in range(args.width):
             curr_ray = Ray(camera.position, curr_pixel)
@@ -215,11 +201,6 @@ def main():
         row_head = row_head - camera.pixel_size * camera.height_v
 
     save_image(image_array, args.output_image)
-
-    #print to delete:
-    end_time = time.time()
-    print(f"Finished rendering in {end_time - start_time:.4f} seconds.")
-
 
 if __name__ == '__main__':
     main()
