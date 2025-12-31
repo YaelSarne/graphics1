@@ -212,7 +212,7 @@ def main():
 
             image_array[y, x] = np.clip(color, 0, 1)
             curr_pixel = curr_pixel + camera.pixel_size * camera.width_v
-        row_head = row_head + camera.pixel_size * camera.height_v
+        row_head = row_head - camera.pixel_size * camera.height_v
 
     save_image(image_array, args.output_image)
 
