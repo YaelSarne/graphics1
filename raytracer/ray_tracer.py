@@ -104,11 +104,11 @@ def get_light_plane_axes(light_dir):
     light_dir = light_dir / np.linalg.norm(light_dir)
     
     if abs(light_dir[0]) < 0.1 and abs(light_dir[2]) < 0.1:
-        helper = np.array([1.0, 0.0, 0.0]) 
+        helper_vec = np.array([1.0, 0.0, 0.0]) 
     else:
-        helper = np.array([0.0, 1.0, 0.0]) 
+        helper_vec = np.array([0.0, 1.0, 0.0]) 
         
-    U = np.cross(helper, light_dir)
+    U = np.cross(helper_vec, light_dir)
     U = U / np.linalg.norm(U)
 
     V = np.cross(light_dir, U)
@@ -145,7 +145,7 @@ def color_by_lights(closest_hit_point, closest_obj, normal, lights, objects, mat
                 point_on_grid = top_left + (current_u * right) + (current_v * up)
 
                 shadow_ray = Ray(closest_hit_point, point_on_grid)
-                shadow_ray.camera_point = closest_hit_point + eps * normal 
+                shadow_ray.camera_point = closest_hit_point + eps * shadow_ray.V 
 
                 dist_to_light = np.linalg.norm(point_on_grid - closest_hit_point)
 
@@ -161,9 +161,7 @@ def color_by_lights(closest_hit_point, closest_obj, normal, lights, objects, mat
 
             # Diffuse
             diff_angle = max(0.0, np.dot(normal, light_dir))
-            
-            diffuse_factor = 1 - material.transparency
-            diffuse_light = np.array(light.color) * np.array(material.diffuse_color) * diff_angle * diffuse_factor
+            diffuse_light = np.array(light.color) * np.array(material.diffuse_color) * diff_angle 
 
             # Specular
             reflected_ray_dir = 2 * np.dot(light_dir, normal) * normal - light_dir
@@ -171,7 +169,7 @@ def color_by_lights(closest_hit_point, closest_obj, normal, lights, objects, mat
             
             specular_light = np.array(light.color) * np.array(material.specular_color) * (spec_angle ** material.shininess) * light.specular_intensity
             
-            colors += light_intensity * (diffuse_light + specular_light)
+            colors += light_intensity * (diffuse_light + specular_light) * (1 - material.transparency)
             
     return colors
 
