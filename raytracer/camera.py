@@ -10,23 +10,23 @@ class Camera:
         self.screen_width = screen_width
 
         #create Vs to all important directions - looking (forward), up, width. 
-        # up is calculated twice - first time not ortogonal, second time corrected.
+        # up is calculated second time ortogonal.
         looking_ray = Ray(position, look_at)
-        raw_up_ray = Ray(position, up_vector)
-        screen_width_v = np.cross(looking_ray.V, raw_up_ray.V)
+        screen_width_v = np.cross(self.up_vector, looking_ray.V,)
         screen_width_v /= np.linalg.norm(screen_width_v)
         up_v = np.cross(looking_ray.V, screen_width_v)
         up_v /= np.linalg.norm(up_v)
-        
+
         #represent screen
         screen_middle = position + looking_ray.V * screen_distance
         pixel_size = screen_width / width_pixels
         screen_height = pixel_size * height_pixels
-        screen_top_left = screen_middle - up_v *screen_height / 2 - screen_width_v * screen_width /2
-        top_left_pixel = screen_top_left + up_v * pixel_size / 2 + screen_width_v * pixel_size / 2
+        screen_top_left = screen_middle + up_v *screen_height / 2 - screen_width_v * screen_width /2
+        top_left_pixel = screen_top_left - up_v * pixel_size / 2 + screen_width_v * pixel_size / 2
 
         #make screen parameters accesible
         self.top_left_pixel = top_left_pixel
         self.pixel_size = pixel_size
         self.height_v = up_v
         self.width_v = screen_width_v
+
