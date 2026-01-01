@@ -1,0 +1,101 @@
+# Camera setup (front-ish, snowman faces camera)
+cam 0 2 15 0 1 4 0 1 0 1.8 1
+
+# Settings
+set 0.07 0.07 0.08 4 6
+
+# --- MATERIALS ---
+mtl 0.8 0.8 0.8 0.5 0.5 0.5 0.3 0.3 0.3 20 0
+mtl 0.1 0.1 0.1 0.8 0.8 0.8 0.8 0.8 0.8 100 0
+mtl 0 0 0 0.9 0.9 0.9 0.1 0.1 0.1 100 0.9
+mtl 0.9 0.1 0.1 0.4 0.4 0.4 0 0 0 20 0
+mtl 0.1 0.2 0.9 0.4 0.4 0.4 0 0 0 20 0
+mtl 0.4 0.9 0.1 0.4 0.4 0.4 0 0 0 20 0
+mtl 0.9 0.8 0.1 0.4 0.4 0.4 0 0 0 20 0
+mtl 0.6 0.1 0.8 0.5 0.5 0.5 0.1 0.1 0.1 40 0
+mtl 1.0 0.5 0.0 0.4 0.4 0.4 0 0 0 20 0
+mtl 0.1 0.9 0.9 0.5 0.5 0.5 0.2 0.2 0.2 50 0
+mtl 0.03 0.03 0.03 0.25 0.25 0.25 0.05 0.05 0.05 20 0
+mtl 0.92 0.92 0.92 0.45 0.45 0.45 0.15 0.15 0.15 25 0
+mtl 0.12 0.12 0.14 0.25 0.25 0.28 0.05 0.05 0.06 20 0
+
+
+# --- OBJECTS ---
+pln 0 1 0 -2 1
+pln 0 0 1 -18 13
+
+# Big mirror sphere (back center)
+sph 0 1 -5 3 2
+
+# (REMOVED) Big glass sphere (back right)
+# sph 3.5 0 -3 2 3
+
+# --- SNOWMAN (moved slightly to make reflection clearer in the small chrome sphere) ---
+# shift: x -0.5, z +0.35 compared to previous
+sph -0.5 -1.2 5.15 1.45 12
+sph -0.5 0.2 4.95 1.10 12
+sph -0.5 1.55 4.60 0.85 12
+
+# Eyes
+sph -0.72 1.70 5.33 0.10 11
+sph -0.28 1.70 5.33 0.10 11
+
+# Nose
+sph -0.50 1.52 5.53 0.18 9
+
+# Buttons
+sph -0.50 0.55 5.40 0.12 11
+sph -0.50 0.05 5.50 0.12 11
+sph -0.50 -0.45 5.60 0.12 11
+
+# --- SCARF (fixed) ---
+# Ring around neck (4 small red spheres)
+sph -0.90 1.05 5.05 0.30 4
+sph -0.10 1.05 5.05 0.30 4
+sph -0.50 1.05 4.70 0.30 4
+sph -0.50 1.05 5.40 0.30 4
+# Hanging tail (front)
+sph -0.50 0.65 5.35 0.28 4
+sph -0.50 0.30 5.45 0.24 4
+
+# --- SMALL MIRROR SPHERE (keep!) ---
+# moved a touch right to separate from snowman visually
+sph 2.55 1.15 5.35 1.25 2
+
+# Small glass sphere on the side (keep, nice)
+sph -2.8 0.4 6.8 0.9 3
+
+# --- BACKGROUND SPHERES (same style) ---
+sph -3 -1 0 1 5
+sph -4 -0.5 3 1.5 10
+sph -2 2 2 0.8 8
+
+sph 3 -1 2 1 9
+sph 5 -0.5 5 1.5 7
+sph 2 3 1 1 4
+
+sph -1.2 -1.2 4 0.8 6
+sph 1.2 -1.2 6 0.8 4
+sph 0 -1.2 8 0.8 10
+sph -0.5 -1.5 2 0.5 9
+
+sph -5 0 8 1 8
+sph 5 0 8 1 6
+
+# a few closer confetti balls
+sph -1.8 -1.4 6.2 0.45 5
+sph -0.8 -1.6 6.8 0.40 10
+sph 0.9 -1.5 6.4 0.42 7
+sph 1.6 -1.4 6.9 0.40 9
+sph 3.4 -1.6 7.2 0.55 8
+sph -3.6 -1.6 7.1 0.55 6
+
+# --- LIGHTS ---
+lgt 10 10 10 1.0 0.8 0.4 1 1 0.5
+lgt -10 10 10 0.2 0.2 0.8 1 0.5 0.5
+lgt 0 10 -10 0.6 0.6 0.6 1 0.5 0.5
+lgt 0 0.5 6 0.35 0.0 0.35 1 0.0 0.35
+
+# Extra face fill
+lgt 0 3 14 0.35 0.35 0.35 1 0.2 0.2
+lgt 0 12 6 0.25 0.25 0.25 1 0.4 0.4
